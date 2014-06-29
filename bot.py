@@ -51,7 +51,7 @@ class YourButt(TwitterBot):
             self.log("Silent mode is on. Would've tweeted: {}".format(text))
             return
 
-        self.post_tweet()
+        self.post_tweet(text)
 
     def on_mention(self, tweet, prefix):
         prefix = prefix + ' '
