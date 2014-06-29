@@ -45,15 +45,28 @@ class YourButt(TwitterBot):
         self.config['autofollow'] = False
 
     def on_scheduled_tweet(self):
+        if self._is_silent():
+            self.log('Not tweeting - silent mode is on')
+            return
+
         self.post_tweet(self._generate_action(max_len=140))
 
     def on_mention(self, tweet, prefix):
+        if self._is_silent():
+            self.log('Not replying to {} - silent mode is on'.format(self._tweet_url(tweet)))
+            return
+
         prefix = prefix + ' '
         text = prefix + self._generate_action(max_len=140-len(prefix))
         self.post_tweet(text, reply_to=tweet)
 
     def on_timeline(self, tweet, prefix):
-        pass
+        if self._is_silent():
+            self.log('Not replying to {} - silent mode is on'.format(self._tweet_url(tweet)))
+            return
+
+    def _is_silent(self):
+        return int(os.environ.get('SILENT_MODE', '0')) != 0
 
     def _generate_action(self, max_len):
         cfg = Butt()
