@@ -45,11 +45,9 @@ class YourButt(TwitterBot):
         self.config['autofollow'] = False
 
     def on_scheduled_tweet(self):
-        return
         self.post_tweet(self._generate_action(max_len=140))
 
     def on_mention(self, tweet, prefix):
-        return
         prefix = prefix + ' '
         text = prefix + self._generate_action(max_len=140-len(prefix))
         self.post_tweet(text, reply_to=tweet)
