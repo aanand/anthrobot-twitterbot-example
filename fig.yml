@@ -1,7 +1,12 @@
+db:
+  image: orchardup/postgresql
+
 bot:
   build: .
   volumes:
     - .:/code
+  links:
+    - db
   environment:
     DB_USER: docker
     DB_PASSWORD: docker

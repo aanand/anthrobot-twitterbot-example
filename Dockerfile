@@ -1,6 +1,6 @@
 FROM orchardup/python:2.7
 
-RUN apt-get update -qq && apt-get install -y git
+RUN apt-get update -qq && apt-get install -y git python-psycopg2
 
 ADD . /code
 WORKDIR /code

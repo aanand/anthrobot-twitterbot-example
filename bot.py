@@ -5,6 +5,8 @@ from twitterbot import TwitterBot
 
 from anthrobot import config, actions
 
+from extensions.sql_storage import SQLStorage
+
 import random
 import os
 import logging
@@ -16,6 +18,8 @@ class Butt(config.Config):
 
 class YourButt(TwitterBot):
     def bot_init(self):
+        self.config['storage'] = SQLStorage(os.environ['DATABASE_URL'])
+
         self.config['api_key'] = os.environ['TWITTER_CONSUMER_KEY']
         self.config['api_secret'] = os.environ['TWITTER_CONSUMER_SECRET']
         self.config['access_key'] = os.environ['TWITTER_ACCESS_TOKEN']
@@ -41,9 +45,11 @@ class YourButt(TwitterBot):
         self.config['autofollow'] = False
 
     def on_scheduled_tweet(self):
+        return
         self.post_tweet(self._generate_action(max_len=140))
 
     def on_mention(self, tweet, prefix):
+        return
         prefix = prefix + ' '
         text = prefix + self._generate_action(max_len=140-len(prefix))
         self.post_tweet(text, reply_to=tweet)
