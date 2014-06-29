@@ -1,2 +1,2 @@
-twitterbot
-anthrobot
+git+http://github.com/thricedotted/twitterbot.git
+git+http://github.com/aanand/anthrobot.git

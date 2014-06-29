@@ -1,0 +1,8 @@
+bot:
+  build: .
+  volumes:
+    - .:/code
+  environment:
+    DB_USER: docker
+    DB_PASSWORD: docker
+    DB_NAME: docker
