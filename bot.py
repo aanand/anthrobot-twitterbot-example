@@ -73,12 +73,13 @@ class YourButt(TwitterBot):
         raise Exception("Failed to generate a short enough tweet")
 
 if __name__ == '__main__':
-    bot = YourButt()
-
-    root_logger = logging.getLogger()
     stderr = logging.StreamHandler()
     stderr.setLevel(logging.DEBUG)
-    stderr.setFormatter(root_logger.handlers[0].formatter)
+    stderr.setFormatter(logging.Formatter(fmt='%(levelname)8s: %(message)s'))
+
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.DEBUG)
     root_logger.addHandler(stderr)
 
+    bot = YourButt()
     bot.run()
