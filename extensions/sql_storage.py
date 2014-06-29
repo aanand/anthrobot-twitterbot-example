@@ -6,7 +6,7 @@ from io import BytesIO
 
 class SQLStorage(object):
     def __init__(self, url):
-        engine = create_engine(url, echo=True)
+        engine = create_engine(url)
         self.conn = engine.connect()
 
         metadata = MetaData()
