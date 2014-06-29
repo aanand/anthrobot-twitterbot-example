@@ -3,7 +3,7 @@
 
 from twitterbot import TwitterBot
 
-from anthrobot import config, actions
+from anthrobot import config, actions, characteristics
 
 from extensions.sql_storage import SQLStorage
 
@@ -45,45 +45,53 @@ class YourButt(TwitterBot):
         self.config['autofollow'] = False
 
     def on_scheduled_tweet(self):
+        text = self.generate_tweet(max_len=140)
+
         if self._is_silent():
-            self.log('Not tweeting - silent mode is on')
+            self.log("Silent mode is on. Would've tweeted: {}".format(text))
             return
 
-        self.post_tweet(self._generate_action(max_len=140))
+        self.post_tweet()
 
     def on_mention(self, tweet, prefix):
+        prefix = prefix + ' '
+        text = prefix + self.generate_tweet(max_len=140-len(prefix))
+
         if self._is_silent():
-            self.log('Not replying to {} - silent mode is on'.format(self._tweet_url(tweet)))
+            self.log("Silent mode is on. Would've responded to {} with: {}".format(self._tweet_url(tweet), text))
             return
 
-        prefix = prefix + ' '
-        text = prefix + self._generate_action(max_len=140-len(prefix))
         self.post_tweet(text, reply_to=tweet)
 
     def on_timeline(self, tweet, prefix):
-        if self._is_silent():
-            self.log('Not replying to {} - silent mode is on'.format(self._tweet_url(tweet)))
-            return
+        pass
 
     def _is_silent(self):
         return int(os.environ.get('SILENT_MODE', '0')) != 0
 
-    def _generate_action(self, max_len):
+    def generate_tweet(self, max_len):
         cfg = Butt()
+        candidates = self.generate_candidates(cfg)
+        candidates = [c for c in candidates if len(c) <= max_len]
 
-        q = ' OR '.join('"%s"' % s for s in cfg.action_seeds())
-        tweets = self.api.search(q=q, count=100, result_type='recent')
-
-        candidates = actions.generate(cfg, [t.text for t in tweets])
         if len(candidates) == 0:
-            raise Exception("No actions were found")
+            raise Exception("No suitable candidates were found")
 
-        for _ in range(5):
-            text = '*%s*' % random.choice(candidates)
-            if len(text) <= max_len:
-                return text
+        return random.choice(candidates)
 
-        raise Exception("Failed to generate a short enough tweet")
+    def generate_candidates(self, cfg):
+        if random.random() < float(os.environ.get('ACTION_PROBABILITY', '0.8')):
+            tweets = self.search(cfg.action_seeds())
+            generated_actions = actions.generate(cfg, [t.text for t in tweets])
+            return ['*%s*' % a for a in generated_actions]
+        else:
+            tweets = self.search(cfg.characteristic_seeds())
+            generated_characteristics = characteristics.generate(cfg, [t.text for t in tweets])
+            return ['Im %s' % a for a in generated_characteristics]
+
+    def search(self, seeds):
+        query = ' OR '.join('"%s"' % s for s in seeds)
+        return self.api.search(query, count=100, result_type='recent')
 
 if __name__ == '__main__':
     stderr = logging.StreamHandler()
