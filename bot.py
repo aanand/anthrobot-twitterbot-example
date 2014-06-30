@@ -27,7 +27,7 @@ class YourButt(TwitterBot):
 
         # use this to define a (min, max) random range of how often to tweet
         # e.g., self.config['tweet_interval_range'] = (5*60, 10*60) # tweets every 5-10 minutes
-        self.config['tweet_interval_range'] = (10*60, 60*60)
+        self.config['tweet_interval_range'] = (1*60, 3*60*60)
 
         # only reply to tweets that specifically mention the bot
         self.config['reply_direct_mention_only'] = False
