@@ -7,6 +7,8 @@ from anthrobot import config, actions, characteristics
 
 from extensions.sql_storage import SQLStorage
 
+import arrow
+
 import random
 import os
 import logging
@@ -44,6 +46,12 @@ class YourButt(TwitterBot):
         # follow back all followers?
         self.config['autofollow'] = False
 
+        # max number of times to reply to someone within the moving window
+        self.config['reply_threshold'] = 5
+
+        # length of the moving window, in seconds
+        self.config['recent_replies_window'] = 10*60
+
     def on_scheduled_tweet(self):
         text = self.generate_tweet(max_len=140)
 
@@ -54,20 +62,57 @@ class YourButt(TwitterBot):
         self.post_tweet(text)
 
     def on_mention(self, tweet, prefix):
+        url = self._tweet_url(tweet)
+
+        self.trim_recent_replies()
+        screen_names = [sn.replace('@', '') for sn in prefix.split()]
+        over_threshold = [sn for sn in screen_names if self.over_reply_threshold(sn)]
+
+        if len(over_threshold) > 0:
+            self.log("Over reply threshold for {}. Not responding to {}".format(", ".join(over_threshold), url))
+            return
+
         prefix = prefix + ' '
         text = prefix + self.generate_tweet(max_len=140-len(prefix))
 
         if self._is_silent():
-            self.log("Silent mode is on. Would've responded to {} with: {}".format(self._tweet_url(tweet), text))
-            return
+            self.log("Silent mode is on. Would've responded to {} with: {}".format(url, text))
+        else:
+            self.post_tweet(text, reply_to=tweet)
 
-        self.post_tweet(text, reply_to=tweet)
+        self.update_recent_replies(screen_names)
 
     def on_timeline(self, tweet, prefix):
         pass
 
     def _is_silent(self):
         return int(os.environ.get('SILENT_MODE', '0')) != 0
+
+    def over_reply_threshold(self, screen_name):
+        replies = [r for r in self.recent_replies() if screen_name in r['screen_names']]
+        return len(replies) >= self.config['reply_threshold']
+
+    def update_recent_replies(self, screen_names):
+        self.recent_replies().append({
+            'created_at': arrow.utcnow(),
+            'screen_names': screen_names,
+        })
+
+        self.log("Updated recent_replies: len = {}".format(len(self.recent_replies())))
+
+    def trim_recent_replies(self):
+        len_before = len(self.recent_replies())
+        now = arrow.utcnow()
+        self.state['recent_replies'] = [
+            r for r in self.recent_replies()
+            if (now - r['created_at']).seconds < self.config['recent_replies_window']
+        ]
+        self.log("Trimmed recent_replies: {} -> {}".format(len_before, len(self.recent_replies())))
+
+    def recent_replies(self):
+        if 'recent_replies' not in self.state:
+            self.state['recent_replies'] = []
+        return self.state['recent_replies']
 
     def generate_tweet(self, max_len):
         cfg = Butt()

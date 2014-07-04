@@ -2,3 +2,4 @@ Pattern==2.6
 tweepy==2.3.0
 sqlalchemy
 psycopg2
+arrow
