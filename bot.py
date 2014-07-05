@@ -50,7 +50,7 @@ class YourButt(TwitterBot):
         self.config['reply_threshold'] = 5
 
         # length of the moving window, in seconds
-        self.config['recent_replies_window'] = 10*60
+        self.config['recent_replies_window'] = 20*60
 
     def on_scheduled_tweet(self):
         text = self.generate_tweet(max_len=140)
