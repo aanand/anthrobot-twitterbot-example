@@ -11,4 +11,4 @@ RUN pip install -r requirements.txt
 ADD . /code
 
 ENV PYTHONUNBUFFERED 1
-CMD ./run.sh
+CMD python bot.py

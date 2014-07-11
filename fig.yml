@@ -3,11 +3,14 @@ db:
 
 bot:
   build: .
+  links:
+    - "db:db"
   volumes:
     - .:/code
-  links:
-    - db
   environment:
-    DB_USER: docker
-    DB_PASSWORD: docker
-    DB_NAME: docker
+    DATABASE_URL: "postgres://docker:docker@db:5432/docker"
+    SILENT_MODE: 1
+    TWITTER_CONSUMER_KEY:
+    TWITTER_CONSUMER_SECRET:
+    TWITTER_ACCESS_TOKEN:
+    TWITTER_ACCESS_TOKEN_SECRET:
