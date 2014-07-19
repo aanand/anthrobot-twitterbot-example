@@ -18,6 +18,15 @@ import random
 import cPickle as pickle
 
 
+def ignore(method):
+    """
+    Use the @ignore decorator on TwitterBot methods you wish to leave
+    unimplemented, such as on_timeline and on_mention.
+    """
+    method.not_implemented = True
+    return method
+
+
 class TwitterBot:
 
     def __init__(self):
@@ -39,7 +48,12 @@ class TwitterBot:
         self.config['reply_interval'] = 10
         self.config['reply_interval_range'] = None
 
+        self.config['ignore_timeline_mentions'] = True
+
+        self.config['logging_level'] = logging.DEBUG
         self.config['storage'] = FileStorage()
+
+        self.state = {}
 
         # call the custom initialization
         self.bot_init()
@@ -51,11 +65,9 @@ class TwitterBot:
         self.id = self.api.me().id
         self.screen_name = self.api.me().screen_name
 
-        self.state = {}
-
         logging.basicConfig(format='%(asctime)s | %(levelname)s: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', 
             filename=self.screen_name + '.log',
-            level=logging.DEBUG)
+            level=self.config['logging_level'])
 
         logging.info('Initializing bot...')
 
@@ -79,11 +91,10 @@ class TwitterBot:
             self.state['recent_timeline'] = []
             self.state['mention_queue'] = []
 
-            self.state['friends'] = self.api.friends_ids(self.id)
-            self.state['followers'] = self.api.followers_ids(self.id)
-            self.state['new_followers'] = []
-            self.state['last_follow_check'] = 0
-
+        self.state['friends'] = self.api.friends_ids(self.id)
+        self.state['followers'] = self.api.followers_ids(self.id)
+        self.state['new_followers'] = []
+        self.state['last_follow_check'] = 0
 
         logging.info('Bot initialized!')
 
@@ -160,16 +171,24 @@ class TwitterBot:
         self.state['followers'].append(f_id)
 
 
-    def post_tweet(self, text, reply_to=None):
+    def post_tweet(self, text, reply_to=None, media=None):
+        kwargs = {}
+        args = [text]
+        if media is not None:
+            cmd = self.api.update_with_media
+            args.insert(0, media)
+        else:
+            cmd = self.api.update_status
+
         try:
             self.log('Tweeting "{}"'.format(text))
             if reply_to:
                 self.log("-- Responding to status {}".format(self._tweet_url(reply_to)))
-                tweet = self.api.update_status(text, in_reply_to_status_id=reply_to.id)
+                kwargs['in_reply_to_status_id'] = reply_to.id
             else:
                 self.log("-- Posting to own timeline")
-                tweet = self.api.update_status(text)
 
+            tweet = cmd(*args, **kwargs)
             self.log('Status posted at {}'.format(self._tweet_url(tweet)))
             return True
 
@@ -185,6 +204,10 @@ class TwitterBot:
 
         except tweepy.TweepError as e:
             self._log_tweepy_error('Can\'t fav status', e)
+
+
+    def _ignore_method(self, method):
+        return hasattr(method, 'not_implemented') and method.not_implemented
 
 
     def _handle_timeline(self):
@@ -236,6 +259,10 @@ class TwitterBot:
         """
         Checks mentions and loads most recent tweets into the mention queue
         """
+        if self._ignore_method(self.on_mention):
+            logging.debug('Ignoring mentions')
+            return
+
         try:
             current_mentions = self.api.mentions_timeline(since_id=self.state['last_mention_id'], count=100)
 
@@ -260,11 +287,22 @@ class TwitterBot:
         """
         Checks timeline and loads most recent tweets into recent timeline
         """
+        if self._ignore_method(self.on_timeline):
+            logging.debug('Ignoring timeline')
+            return
+
         try:
             current_timeline = self.api.home_timeline(count=200, since_id=self.state['last_timeline_id'])
 
-            # remove all tweets with mentions (heuristically)
-            current_timeline = [t for t in current_timeline if '@' not in t.text and t.author.screen_name.lower() != self.screen_name.lower()]
+            # remove my tweets
+            current_timeline = [t for t in current_timeline if t.author.screen_name.lower() != self.screen_name.lower()]
+
+            # remove all tweets mentioning me
+            current_timeline = [t for t in current_timeline if not re.search('@'+self.screen_name, t.text, flags=re.IGNORECASE)]
+
+            if self.config['ignore_timeline_mentions']:
+                # remove all tweets with mentions (heuristically)
+                current_timeline = [t for t in current_timeline if '@' not in t.text]
 
             if len(current_timeline) != 0:
                 self.state['last_timeline_id'] = current_timeline[0].id
