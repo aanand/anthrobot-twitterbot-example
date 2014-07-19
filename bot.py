@@ -47,6 +47,9 @@ class YourButt(TwitterBot):
         # follow back all followers?
         self.config['autofollow'] = False
 
+        # ignore home timeline tweets which mention other accounts?
+        self.config['ignore_timeline_mentions'] = False
+
         # max number of times to reply to someone within the moving window
         self.config['reply_threshold'] = 5
 
