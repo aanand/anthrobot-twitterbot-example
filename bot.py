@@ -56,6 +56,12 @@ class YourButt(TwitterBot):
         # regex to check if we should reply to a timeline tweet
         self.config['timeline_pattern'] = r'\bbutts?\b'
 
+        # probability of replying to a matching timeline tweet
+        self.config['timeline_reply_probability'] = float(os.environ.get('TIMELINE_REPLY_PROBABILITY', '1.0'))
+
+        # probability of tweeting an action, rather than a characteristic
+        self.config['action_probability'] = float(os.environ.get('ACTION_PROBABILITY', '0.8'))
+
     def on_scheduled_tweet(self):
         text = self.generate_tweet(max_len=140)
 
@@ -78,7 +84,7 @@ class YourButt(TwitterBot):
         if not self.check_reply_threshold(tweet, prefix):
             return
 
-        if random.random() > float(os.environ.get('TIMELINE_REPLY_PROBABILITY', '0.5')):
+        if random.random() > self.config['timeline_reply_probability']:
             self.log("Failed dice roll. Not responding to {}".format(self._tweet_url(tweet)))
             return
 
@@ -151,7 +157,7 @@ class YourButt(TwitterBot):
         return random.choice(candidates)
 
     def generate_candidates(self, cfg):
-        if random.random() < float(os.environ.get('ACTION_PROBABILITY', '0.8')):
+        if random.random() < self.config['action_probability']:
             tweets = self.search(cfg.action_seeds())
             generated_actions = actions.generate(cfg, [t.text for t in tweets])
             return ['*%s*' % a for a in generated_actions]
