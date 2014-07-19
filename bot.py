@@ -12,6 +12,7 @@ import arrow
 import random
 import os
 import logging
+import re
 
 
 class Butt(config.Config):
@@ -52,6 +53,9 @@ class YourButt(TwitterBot):
         # length of the moving window, in seconds
         self.config['recent_replies_window'] = 20*60
 
+        # regex to check if we should reply to a timeline tweet
+        self.config['timeline_pattern'] = r'\bbutts?\b'
+
     def on_scheduled_tweet(self):
         text = self.generate_tweet(max_len=140)
 
@@ -62,43 +66,65 @@ class YourButt(TwitterBot):
         self.post_tweet(text)
 
     def on_mention(self, tweet, prefix):
-        url = self._tweet_url(tweet)
-
-        self.trim_recent_replies()
-        screen_names = [sn.replace('@', '') for sn in prefix.split()]
-        over_threshold = [sn for sn in screen_names if self.over_reply_threshold(sn)]
-
-        if len(over_threshold) > 0:
-            self.log("Over reply threshold for {}. Not responding to {}".format(", ".join(over_threshold), url))
+        if not self.check_reply_threshold(tweet, prefix):
             return
 
+        self.reply_to_tweet(tweet, prefix)
+
+    def on_timeline(self, tweet, prefix):
+        if not re.search(self.config['timeline_pattern'], tweet.text, flags=re.IGNORECASE):
+            return
+
+        if not self.check_reply_threshold(tweet, prefix):
+            return
+
+        if random.random() > float(os.environ.get('TIMELINE_REPLY_PROBABILITY', '0.5')):
+            self.log("Failed dice roll. Not responding to {}".format(self._tweet_url(tweet)))
+            return
+
+        self.reply_to_tweet(tweet, prefix)
+
+    def reply_to_tweet(self, tweet, prefix):
         prefix = prefix + ' '
         text = prefix + self.generate_tweet(max_len=140-len(prefix))
 
         if self._is_silent():
-            self.log("Silent mode is on. Would've responded to {} with: {}".format(url, text))
+            self.log("Silent mode is on. Would've responded to {} with: {}".format(self._tweet_url(tweet), text))
         else:
             self.post_tweet(text, reply_to=tweet)
 
-        self.update_recent_replies(screen_names)
-
-    def on_timeline(self, tweet, prefix):
-        pass
+        self.update_reply_threshold(tweet, prefix)
 
     def _is_silent(self):
         return int(os.environ.get('SILENT_MODE', '0')) != 0
+
+    def check_reply_threshold(self, tweet, prefix):
+        self.trim_recent_replies()
+        screen_names = self.get_screen_names(prefix)
+        over_threshold = [sn for sn in screen_names if self.over_reply_threshold(sn)]
+
+        if len(over_threshold) > 0:
+            self.log("Over reply threshold for {}. Not responding to {}".format(", ".join(over_threshold), self._tweet_url(tweet)))
+            return False
+
+        return True
 
     def over_reply_threshold(self, screen_name):
         replies = [r for r in self.recent_replies() if screen_name in r['screen_names']]
         return len(replies) >= self.config['reply_threshold']
 
-    def update_recent_replies(self, screen_names):
+    def update_reply_threshold(self, tweet, prefix):
+        screen_names = self.get_screen_names(prefix)
+
         self.recent_replies().append({
             'created_at': arrow.utcnow(),
             'screen_names': screen_names,
         })
 
         self.log("Updated recent_replies: len = {}".format(len(self.recent_replies())))
+
+    def get_screen_names(self, prefix):
+        return [sn.replace('@', '') for sn in prefix.split()]
 
     def trim_recent_replies(self):
         len_before = len(self.recent_replies())
