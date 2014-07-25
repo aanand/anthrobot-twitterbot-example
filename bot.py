@@ -60,10 +60,10 @@ class YourButt(TwitterBot):
         self.config['timeline_pattern'] = r'\bbutts?\b'
 
         # probability of replying to a matching timeline tweet
-        self.config['timeline_reply_probability'] = float(os.environ.get('TIMELINE_REPLY_PROBABILITY', '1.0'))
+        self.config['timeline_reply_probability'] = 1.0
 
         # probability of tweeting an action, rather than a characteristic
-        self.config['action_probability'] = float(os.environ.get('ACTION_PROBABILITY', '0.8'))
+        self.config['action_probability'] = 0.8
 
         self.config['silent_mode'] = (int(os.environ.get('SILENT_MODE', '0')) != 0)
 
