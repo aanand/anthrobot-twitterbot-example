@@ -51,7 +51,7 @@ class YourButt(TwitterBot):
         self.config['ignore_timeline_mentions'] = False
 
         # max number of times to reply to someone within the moving window
-        self.config['reply_threshold'] = 5
+        self.config['reply_threshold'] = 3
 
         # length of the moving window, in seconds
         self.config['recent_replies_window'] = 20*60
