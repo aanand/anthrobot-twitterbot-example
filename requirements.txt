@@ -1,5 +1,5 @@
 Pattern==2.6
 tweepy==2.3.0
-sqlalchemy
-psycopg2
-arrow
+sqlalchemy==0.9.7
+psycopg2==2.4.5
+arrow==0.4.2
