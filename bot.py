@@ -65,7 +65,7 @@ class YourButt(TwitterBot):
         # probability of tweeting an action, rather than a characteristic
         self.config['action_probability'] = 0.8
 
-        self.config['silent_mode'] = (int(os.environ.get('SILENT_MODE', '0')) != 0)
+        self.config['silent_mode'] = (int(os.environ.get('SILENT_MODE', '1')) != 0)
 
     def on_scheduled_tweet(self):
         text = self.generate_tweet(max_len=140)
